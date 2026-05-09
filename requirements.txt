@@ -1,0 +1,12 @@
+flask
+flask-cors
+streamlit
+langchain
+langgraph
+langchain-community
+langchain-ollama
+chromadb
+sentence-transformers
+pypdf
+python-dotenv
+requests
