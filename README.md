@@ -13,24 +13,6 @@ The agent autonomously determines which tool to invoke based on the nature of th
  
 ---
  
-## Architecture
- 
-```
-User (Streamlit Interface)
-        |
-Agent — ReAct Loop (Think → Act → Observe)
-        |
-   _____|______________________________
-  |              |                    |
-search_docs()  generate_scenario()  evaluate_response()
-  |              |                    |
-ChromaDB       Mistral 7B           Mistral 7B
-        |
-Knowledge Base (PDFs → Embeddings → ChromaDB)
-```
- 
----
- 
 ## Technologies
  
 | Component | Technology |
