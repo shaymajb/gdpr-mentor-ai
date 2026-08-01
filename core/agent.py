@@ -7,12 +7,11 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaLLM
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ─────────────────────────────────────────
 # Initialisation
-# ─────────────────────────────────────────
 print("Loading LLM and embeddings...")
 
-llm = OllamaLLM(model="mistral")
+MODEL_NAME = os.environ.get("LLM_MODEL", "mistral")
+llm = OllamaLLM(model=MODEL_NAME)
 
 embeddings = HuggingFaceEmbeddings(
     model_name="all-MiniLM-L6-v2"
@@ -29,9 +28,8 @@ vectorstore = Chroma(
 
 print("Agent ready.")
 
-# ─────────────────────────────────────────
 # MAIN AGENT — automatic routing
-# ─────────────────────────────────────────
+
 def run_agent(question: str, history: list = []) -> dict:
     """
     Agentic AI — ReAct pattern :
@@ -64,9 +62,8 @@ def run_agent(question: str, history: list = []) -> dict:
         return _search_gdpr(question, history)
 
 
-# ─────────────────────────────────────────
 # TOOL 1 — GDPR document search (RAG)
-# ─────────────────────────────────────────
+
 def _search_gdpr(question: str, history: list = []) -> dict:
     print("   -> [Tool: Search] querying ChromaDB...")
     docs = vectorstore.similarity_search(question, k=4)
@@ -116,9 +113,8 @@ document section. Use plain language suitable for a non-legal SME owner."""
     }
 
 
-# ─────────────────────────────────────────
 # TOOL 2 — Compliance check
-# ─────────────────────────────────────────
+
 def _compliance_check(question: str, history: list = []) -> dict:
     print("   -> [Tool: Compliance] querying ChromaDB...")
     docs = vectorstore.similarity_search(question, k=4)
@@ -172,9 +168,8 @@ Keep the language simple and actionable for a small business owner."""
     }
 
 
-# ─────────────────────────────────────────
 # TOOL 3 — Risk assessment
-# ─────────────────────────────────────────
+
 def _risk_assessment(question: str, history: list = []) -> dict:
     print("   -> [Tool: Risk] querying ChromaDB...")
     docs = vectorstore.similarity_search(question, k=4)
@@ -227,9 +222,8 @@ Be specific and practical for a small business with limited resources."""
     }
 
 
-# ─────────────────────────────────────────
 # TOOL 4 — Template generator
-# ─────────────────────────────────────────
+
 def _generate_template(question: str) -> dict:
     print("   -> [Tool: Template] querying ChromaDB...")
     docs = vectorstore.similarity_search(question, k=3)
@@ -270,9 +264,8 @@ Make it practical and immediately usable by a small business."""
     }
 
 
-# ─────────────────────────────────────────
 # Helper — extract risk score from LLM text
-# ─────────────────────────────────────────
+
 def _extract_risk_score(text: str) -> int:
     import re
     patterns = [
