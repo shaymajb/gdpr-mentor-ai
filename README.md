@@ -1,122 +1,150 @@
-# ENA-Mentor AI
-**The Intelligent Knowledge Base and Decision Coach of the Tunisian Administration**
- 
-Project — Ecole Nationale d'Administration (ENA) | University Partnership
+# GDPR Mentor AI
+**An Agentic AI Compliance Assistant for European SMEs**
  
 ---
  
 ## Overview
  
-ENA-Mentor AI is an intelligent assistant designed for students and trainers at the Tunisian ENA. It leverages 20 years of administrative memoirs, legal texts, and circulars through a sovereign Agentic AI architecture based on RAG (Retrieval-Augmented Generation) running entirely on local infrastructure.
+GDPR Mentor AI is an agentic AI system that helps small and medium-sized enterprises understand and apply the General Data Protection Regulation. Most SMEs cannot afford legal counsel to interpret 200 pages of regulatory text, yet the cost of non-compliance can reach 20 million euros or 4 percent of global annual turnover.
  
-The agent autonomously determines which tool to invoke based on the nature of the user's request — document retrieval, crisis simulation, or response evaluation — without any manual routing.
+The system indexes official EU regulatory documents and autonomously routes each user query to one of four specialized tools, rather than relying on a single fixed retrieval pipeline. This agentic routing is what distinguishes the system from a standard RAG chatbot: the agent reasons about the type of request before deciding how to act.
+ 
+The system runs entirely on local infrastructure. No user data or query content is sent to any external API, which preserves full data sovereignty for the sensitive compliance information SMEs are working with.
  
 ---
  
-## Technologies
+## Architecture
+ 
+```
+User (Streamlit Interface)
+        |
+Agent — Keyword-based Router
+        |
+   _____|______________________________
+  |              |                |         |
+search_gdpr() compliance_check() risk_assessment() generate_template()
+  |              |                |         |
+ChromaDB      Mistral 7B      Mistral 7B  Mistral 7B
+        |
+Knowledge Base (PDFs -> Chunking -> Embeddings -> ChromaDB)
+```
+ 
+Each tool retrieves relevant context from the vector database before generating a response, ensuring every answer is grounded in the official source documents rather than the model's general training knowledge.
+ 
+---
+ 
+## The Four Tools
+ 
+**Regulation Search**
+Answers direct questions about GDPR provisions, citing specific articles and source documents.
+ 
+**Compliance Check**
+Evaluates a described business practice against GDPR requirements and returns a structured compliance status with required actions and a risk score.
+ 
+**Risk Assessment**
+Analyzes a data processing scenario and identifies the top risks with severity levels and recommended mitigations.
+ 
+**Template Generator**
+Produces ready-to-use GDPR-compliant document templates, such as privacy notices or data processing agreements, with citations to the relevant articles.
+ 
+---
+ 
+## Technology Stack
  
 | Component | Technology |
 |---|---|
 | User Interface | Streamlit |
-| Agentic Orchestration | LangGraph |
 | Local LLM | Mistral 7B via Ollama |
 | Vector Database | ChromaDB |
-| Embeddings | sentence-transformers / all-MiniLM-L6-v2 |
-| PDF Extraction | PyMuPDF / PyPDF |
-| Data Sovereignty | 100% local — no data leaves the server |
+| Embeddings | sentence-transformers, all-MiniLM-L6-v2 |
+| PDF Processing | PyMuPDF |
+| Report Generation | fpdf2 |
+| Evaluation Framework | RAGAS |
+| Visualization | Plotly |
  
 ---
  
-## Installation
+## Knowledge Base
+ 
+The system is grounded in four official EU regulatory documents, ingested and indexed as 886 chunks in ChromaDB:
+ 
+- Regulation (EU) 2016/679 (GDPR full text, CELEX 32016R0679)
+- CNIL Guide to Data Security for SMEs
+- EDPB Guidelines on Data Protection by Design and by Default
+- Small Business GDPR Guide
+---
+ 
+## Evaluation
+ 
+The RAG pipeline was evaluated using RAGAS, an automated framework for assessing retrieval-augmented generation systems. Faithfulness was selected as the primary metric, measuring whether generated answers are factually grounded in the retrieved source documents rather than fabricated.
+ 
+| Metric | Score |
+|---|---|
+| Faithfulness | 1.00 / 1.00 |
+ 
+The completed evaluation returned a perfect faithfulness score, indicating the tested answer was fully supported by the retrieved GDPR source content with no unsupported claims. One evaluation job exceeded the configured timeout under local CPU inference and did not return a score; this constraint is documented in detail in TESTING.md, along with the full functional test pass covering all four tools and edge cases.
+ 
+---
+ 
+## Local Deployment
+ 
+The system is designed to run locally by default, which guarantees that no compliance-sensitive business data is transmitted to a third party during use.
  
 ### Prerequisites
+ 
 - Python 3.10 or higher
-- [Ollama](https://ollama.com) installed on your machine
+- Ollama installed locally (https://ollama.com)
+### Setup
  
-### Steps
- 
-**1. Clone the repository**
 ```bash
-git clone https://github.com/YOUR_USERNAME/ena-mentor-ai.git
-cd ena-mentor-ai
-```
- 
-**2. Install dependencies**
-```bash
+git clone https://github.com/shaymajb/gdpr-mentor-ai.git
+cd gdpr-mentor-ai
 pip install -r requirements.txt
-```
- 
-**3. Download the Mistral model**
-```bash
 ollama pull mistral
-```
- 
-**4. Index ENA documents**
-```bash
 python core/ingestion.py
-```
- 
-**5. Launch the application**
-```bash
 streamlit run app.py
 ```
  
-The application runs at `http://localhost:8501`
+The application will be available at http://localhost:8501.
+ 
+### Model Configuration
+ 
+The LLM is configurable via an environment variable, allowing a lighter model to be used in resource-constrained environments without any code changes:
+ 
+```bash
+set LLM_MODEL=phi3:mini
+streamlit run app.py
+```
+ 
+By default the system uses Mistral 7B, which is the configuration used for all documented testing and evaluation results in this repository.
  
 ---
  
-## Usage
+## Known Limitations
  
-The agent supports three modes of interaction, selected automatically based on the query.
- 
-**Document retrieval**
-```
-"What are the legal texts governing public procurement in Tunisia?"
-"What are the archiving procedures according to ENA documents?"
-"How is recruitment handled in the Tunisian civil service?"
-```
- 
-**Crisis simulation**
-```
-"Generate a flood crisis simulation for a Governor of Nabeul"
-"Create a sanitary crisis scenario in a Tunisian governorate"
-```
- 
-**Response evaluation**
-```
-"Evaluate my response: I activate the ORSEC plan and evacuate riverside districts first"
-"Give me feedback on my decision: I contact the Minister before taking field action"
-```
- 
+- Inference runs on CPU with no GPU acceleration. This is a deliberate architectural tradeoff to preserve full data sovereignty rather than a performance oversight; response times range from under two minutes with the lighter Phi-3-mini configuration to several minutes with Mistral 7B on modest hardware. A production deployment would move inference to dedicated GPU infrastructure, either on-premise for continued sovereignty or via a self-hosted serving framework such as vLLM.
+- The tool router uses keyword-based classification rather than an LLM-based intent classifier, prioritizing predictability and low latency over more nuanced routing.
+- Full testing methodology and results, including all four tools and edge cases, are documented separately in TESTING.md.
 ---
  
-## How the Agent Works
+## Repository Structure
  
-The agent follows the ReAct loop (Reasoning and Acting):
- 
-1. Think — the agent analyzes the query and selects the appropriate tool
-2. Act — it calls search_documents(), generate_scenario(), or evaluate_response()
-3. Observe — it verifies the result and formulates the final response
- 
-This decision cycle is what makes ENA-Mentor an Agentic AI system rather than a conventional chatbot.
- 
----
- 
-## Data Sovereignty
- 
-All processing runs locally on the host machine. Mistral 7B is served through Ollama without any external API calls. ChromaDB stores all vector embeddings locally. The system has zero dependency on OpenAI or any third-party cloud provider, ensuring full compliance with institutional data confidentiality requirements.
- 
----
- 
-## Indexed Documents
- 
-- Liste des nouvelles acquisitions — Bibliotheque ENA (bilingual AR/FR)
-- Plan de gestion des crises administratives — ENA 2023
-- Memoire de fin d'etudes : Digitalisation des communes tunisiennes — Promotion 2022
-- Guide des procedures administratives de l'Etat tunisien — Edition 2023
+```
+gdpr-mentor-ai/
+├── core/
+│   ├── agent.py         Agent logic and the four tools
+│   ├── ingestion.py      PDF to ChromaDB pipeline
+│   └── evaluator.py       RAGAS evaluation script
+├── data/                  Source PDF documents
+├── db/                    ChromaDB vector store
+├── app.py                 Streamlit interface
+├── requirements.txt
+├── README.md
+└── TESTING.md
+```
  
 ---
  
 ## Author
  
-**Chaima Jbeli**
+**Chaima Jebali**
